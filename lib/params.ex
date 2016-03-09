@@ -74,7 +74,7 @@ defmodule Params do
   ```
   """
   @spec model(Changeset.t) :: Struct.t
-  def model(%Changeset{model: model} = ch) do
+  def model(%Changeset{data: model} = ch) do
     Enum.reduce(ch.changes, model, fn {k, v}, m ->
       case v do
         %Changeset{} -> Map.put(m, k, model(v))
@@ -103,7 +103,7 @@ defmodule Params do
   end
 
   @doc false
-  def changeset(%Changeset{model: %{__struct__: module}} = changeset, params, changeset_name)
+  def changeset(%Changeset{data: %{__struct__: module}} = changeset, params, changeset_name)
   when is_atom(module) and is_atom(changeset_name) do
     {required, required_relations} =
       relation_partition(module, required(module))
@@ -111,7 +111,8 @@ defmodule Params do
     {optional, optional_relations} =
       relation_partition(module, optional(module))
 
-    Changeset.cast(changeset, params, required, optional)
+    Changeset.cast(changeset, params, required ++ optional)
+    |> Changeset.validate_required(required)
     |> cast_relations(required_relations,
                       required: true, with: changeset_name)
     |> cast_relations(optional_relations,
